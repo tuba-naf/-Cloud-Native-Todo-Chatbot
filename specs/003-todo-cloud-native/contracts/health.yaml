@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info:
+  title: Todo Backend Health API
+  description: >
+    Phase IV health endpoint for Kubernetes liveness and readiness probes.
+    This endpoint is the ONLY new endpoint added by Phase IV.
+    All Phase II and Phase III endpoints remain unchanged.
+  version: 1.0.0
+
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Kubernetes health check
+      description: >
+        Returns the health status of the backend service.
+        Used by Kubernetes liveness and readiness probes.
+        Does NOT require authentication (exempt from JWT per Principle I).
+      tags:
+        - Health
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - healthy
+                    example: healthy
+                required:
+                  - status
+              example:
+                status: healthy
+
+# Note: This endpoint already exists at backend/app/main.py:62-64
+# No code changes required for the health endpoint itself.

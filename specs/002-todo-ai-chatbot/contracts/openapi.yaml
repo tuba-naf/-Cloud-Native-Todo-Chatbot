@@ -1,0 +1,244 @@
+openapi: 3.0.3
+info:
+  title: Todo AI Chatbot API (Phase III)
+  description: >
+    Stateless AI chat endpoint for natural language task management.
+    Extends the Phase II Todo API without modifying existing endpoints.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://your-hf-space.hf.space
+    description: Production server (Hugging Face)
+
+tags:
+  - name: Chat
+    description: AI-powered chat endpoint for task management
+
+paths:
+  /api/{user_id}/chat:
+    post:
+      tags:
+        - Chat
+      summary: Send a chat message
+      description: >
+        Process a natural language message through the AI agent.
+        Reconstructs conversation context from the database (stateless).
+        Creates a new conversation if conversation_id is omitted.
+        Returns a natural language response and the conversation ID.
+      operationId: sendChatMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: >
+            User UUID. MUST match the authenticated user's ID from JWT claims.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              newConversation:
+                summary: Start new conversation
+                value:
+                  message: "Add a task to buy groceries"
+              existingConversation:
+                summary: Continue existing conversation
+                value:
+                  message: "Also add milk to the list"
+                  conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+              listTasks:
+                summary: Query tasks
+                value:
+                  message: "What are my pending tasks?"
+                  conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Chat response with assistant message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                taskCreated:
+                  summary: Task created confirmation
+                  value:
+                    response: "I've added 'Buy groceries' to your tasks!"
+                    conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+                taskList:
+                  summary: Task listing
+                  value:
+                    response: "You have 3 pending tasks:\n1. Buy groceries\n2. Finish report\n3. Call dentist"
+                    conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+                clarification:
+                  summary: Clarification request
+                  value:
+                    response: "I found two tasks matching 'groceries'. Did you mean:\n1. Buy groceries\n2. Buy organic groceries\nPlease specify which one."
+                    conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+        '400':
+          description: Invalid request (empty message, malformed UUID)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authenticated or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: user_id does not match JWT claims
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Conversation not found or not owned by user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: AI service temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: "Service temporarily unavailable, please try again."
+
+  /api/{user_id}/conversations/recent:
+    get:
+      tags:
+        - Chat
+      summary: Get most recent conversation with history
+      description: >
+        Returns the user's most recent conversation and its messages
+        (up to 50, chronologically ordered). Used by the frontend to
+        resume conversations on page load.
+      operationId: getRecentConversation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: >
+            User UUID. MUST match the authenticated user's ID from JWT claims.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Most recent conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentConversationResponse'
+        '204':
+          description: No conversations found for user
+        '401':
+          description: Not authenticated or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: user_id does not match JWT claims
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from Phase II login endpoint
+
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          description: User's natural language message
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: >
+            Existing conversation ID to continue.
+            Omit to start a new conversation.
+
+    ChatResponse:
+      type: object
+      required:
+        - response
+        - conversation_id
+      properties:
+        response:
+          type: string
+          description: Assistant's natural language response
+        conversation_id:
+          type: string
+          format: uuid
+          description: Conversation ID (newly created or existing)
+
+    RecentConversationResponse:
+      type: object
+      required:
+        - conversation_id
+        - title
+        - messages
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+          description: The most recent conversation's ID
+        title:
+          type: string
+          nullable: true
+          description: Conversation title (auto-generated from first message)
+        messages:
+          type: array
+          description: Up to 50 most recent messages in chronological order
+          items:
+            type: object
+            required:
+              - role
+              - content
+              - created_at
+            properties:
+              role:
+                type: string
+                enum: [user, assistant, tool]
+                description: Message sender role
+              content:
+                type: string
+                description: Message content
+              created_at:
+                type: string
+                format: date-time
+                description: Message timestamp
+
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: User-friendly error message
