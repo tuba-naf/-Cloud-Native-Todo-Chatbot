@@ -1,0 +1,39 @@
+replicaCount: 1
+
+image:
+  repository: todo-frontend
+  tag: latest
+  pullPolicy: Never
+
+service:
+  type: ClusterIP
+  port: 3000
+
+resources:
+  requests:
+    cpu: 150m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+livenessProbe:
+  tcpSocket:
+    port: 3000
+  periodSeconds: 30
+  failureThreshold: 3
+
+readinessProbe:
+  tcpSocket:
+    port: 3000
+  periodSeconds: 10
+  failureThreshold: 3
+
+ingress:
+  enabled: true
+  className: nginx
+  host: todo.local
+
+# Non-sensitive frontend configuration
+config:
+  nextPublicApiUrl: "http://todo.local"

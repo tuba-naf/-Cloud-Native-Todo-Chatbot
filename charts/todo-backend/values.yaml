@@ -1,0 +1,57 @@
+replicaCount: 1
+
+image:
+  repository: todo-backend
+  tag: latest
+  pullPolicy: Never
+
+service:
+  type: ClusterIP
+  port: 8000
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+ingress:
+  enabled: true
+  className: nginx
+  host: todo.local
+
+# External K8s Secret name (created via kubectl create secret generic)
+secretName: todo-secrets
+
+# Optional: create secret via Helm (disabled by default)
+secret:
+  create: false
+  # Values below only used if secret.create is true
+  # Pass via --set at install time; never commit actual values
+  databaseUrl: ""
+  betterAuthSecret: ""
+  openaiApiKey: ""
+
+# Non-sensitive configuration
+config:
+  jwtAlgorithm: "HS256"
+  jwtExpireDays: "7"
+  corsOrigins: "http://todo.local"

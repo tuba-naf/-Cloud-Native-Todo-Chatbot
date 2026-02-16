@@ -1,0 +1,36 @@
+# Minikube-specific overrides for local development
+# Usage: helm install <release> <chart> -f charts/values/minikube.yaml
+
+# Backend overrides
+todo-backend:
+  image:
+    repository: todo-backend
+    tag: latest
+    pullPolicy: Never
+  ingress:
+    enabled: true
+    host: todo.local
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Frontend overrides
+todo-frontend:
+  image:
+    repository: todo-frontend
+    tag: latest
+    pullPolicy: Never
+  ingress:
+    enabled: true
+    host: todo.local
+  resources:
+    requests:
+      cpu: 150m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi

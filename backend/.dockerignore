@@ -1,0 +1,35 @@
+# Environment / Secrets
+.env
+.env.*
+
+# Version control
+.git
+.gitignore
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Alembic migration versions (managed separately)
+alembic/versions/
+
+# Documentation
+*.md
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
